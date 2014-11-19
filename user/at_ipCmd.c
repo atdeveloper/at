@@ -102,20 +102,43 @@ at_exeCmdCifsr(uint8_t id)//add get station ip and ap ip
 {
   struct ip_info pTempIp;
   char temp[64];
+  uint8 bssid[6];
 
   if((at_wifiMode == SOFTAP_MODE)||(at_wifiMode == STATIONAP_MODE))
   {
     wifi_get_ip_info(0x01, &pTempIp);
+    os_sprintf(temp, "%s:APIP,", at_fun[id].at_cmdName);
+    uart0_sendStr(temp);
+
     os_sprintf(temp, "%d.%d.%d.%d\r\n",
                IP2STR(&pTempIp.ip));
+    uart0_sendStr(temp);
+
+    os_sprintf(temp, "%s:APMAC,", at_fun[id].at_cmdName);
+    uart0_sendStr(temp);
+
+    wifi_get_macaddr(SOFTAP_IF, bssid);
+    os_sprintf(temp, MACSTR"\r\n",
+               MAC2STR(bssid));
     uart0_sendStr(temp);
 //    mdState = m_gotip; /////////
   }
   if((at_wifiMode == STATION_MODE)||(at_wifiMode == STATIONAP_MODE))
   {
     wifi_get_ip_info(0x00, &pTempIp);
+    os_sprintf(temp, "%s:STAIP,", at_fun[id].at_cmdName);
+    uart0_sendStr(temp);
+
     os_sprintf(temp, "%d.%d.%d.%d\r\n",
                IP2STR(&pTempIp.ip));
+    uart0_sendStr(temp);
+
+    os_sprintf(temp, "%s:STAMAC,", at_fun[id].at_cmdName);
+    uart0_sendStr(temp);
+
+    wifi_get_macaddr(STATION_IF, bssid);
+    os_sprintf(temp, MACSTR"\r\n",
+               MAC2STR(bssid));
     uart0_sendStr(temp);
 //    mdState = m_gotip; /////////
   }
@@ -249,6 +272,59 @@ at_tcpclient_recv(void *arg, char *pdata, unsigned short len)
 }
 
 /**
+  * @brief  Client received callback function.
+  * @param  arg: contain the ip link information
+  * @param  pdata: received data
+  * @param  len: the lenght of received data
+  * @retval None
+  */
+void ICACHE_FLASH_ATTR
+at_udpclient_recv(void *arg, char *pdata, unsigned short len)
+{
+  struct espconn *pespconn = (struct espconn *)arg;
+  at_linkConType *linkTemp = (at_linkConType *)pespconn->reverse;
+  char temp[32];
+
+  os_printf("recv\r\n");
+  if(linkTemp->changType == 0) //if when sending, receive data???
+  {
+    os_memcpy(pespconn->proto.udp->remote_ip, linkTemp->remoteIp, 4);
+    pespconn->proto.udp->remote_port = linkTemp->remotePort;
+  }
+  else if(linkTemp->changType == 1)
+  {
+    os_memcpy(linkTemp->remoteIp, pespconn->proto.udp->remote_ip, 4);
+    linkTemp->remotePort = pespconn->proto.udp->remote_port;
+    linkTemp->changType = 0;
+  }
+//  else if(linkTemp->changType == 2)
+//  {
+//    os_memcpy(linkTemp->remoteIp, pespconn->proto.udp->remote_ip, 4);
+//    linkTemp->remotePort = pespconn->proto.udp->remote_port;
+//  }
+
+  if(at_ipMux)
+  {
+    os_sprintf(temp, "\r\n+IPD,%d,%d:",
+               linkTemp->linkId, len);
+    uart0_sendStr(temp);
+    uart0_tx_buffer(pdata, len);
+  }
+  else if(IPMODE == FALSE)
+  {
+    os_sprintf(temp, "\r\n+IPD,%d:", len);
+    uart0_sendStr(temp);
+    uart0_tx_buffer(pdata, len);
+  }
+  else
+  {
+    uart0_tx_buffer(pdata, len);
+    return;
+  }
+  at_backOk;
+}
+
+/**
   * @brief  Client send over callback function.
   * @param  arg: contain the ip link information
   * @retval None
@@ -267,10 +343,34 @@ at_tcpclient_sent_cb(void *arg)
     ETS_UART_INTR_ENABLE();
     return;
   }
-	uart0_sendStr("\r\nSEND OK\r\n");
   specialAtState = TRUE;
   at_state = at_statIdle;
+	uart0_sendStr("\r\nSEND OK\r\n");
 }
+
+///**
+//  * @brief  Send over callback function.
+//  * @param  arg: contain the ip link information
+//  * @retval None
+//  */
+//static void ICACHE_FLASH_ATTR
+//at_udp_sent_cb(void *arg)
+//{
+////  os_free(at_dataLine);
+////  os_printf("send_cb\r\n");
+//  if(IPMODE == TRUE)
+//  {
+//    ipDataSendFlag = 0;
+//    os_timer_disarm(&at_delayChack);
+//    os_timer_arm(&at_delayChack, 20, 0);
+//    system_os_post(at_recvTaskPrio, 0, 0); ////
+//    ETS_UART_INTR_ENABLE();
+//    return;
+//  }
+//  uart0_sendStr("\r\nSEND OK\r\n");
+//  specialAtState = TRUE;
+//  at_state = at_statIdle;
+//}
 
 /**
   * @brief  Tcp client connect success callback function.
@@ -282,6 +382,7 @@ at_tcpclient_connect_cb(void *arg)
 {
   struct espconn *pespconn = (struct espconn *)arg;
   at_linkConType *linkTemp = (at_linkConType *)pespconn->reverse;
+  char temp[16];
 
   os_printf("tcp client connect\r\n");
   os_printf("pespconn %p\r\n", pespconn);
@@ -295,8 +396,18 @@ at_tcpclient_connect_cb(void *arg)
 
   mdState = m_linked;
 //  at_linkNum++;
+  if(at_ipMux)
+  {
+    os_sprintf(temp,"%d,CONNECT\r\n", linkTemp->linkId);
+    uart0_sendStr(temp);
+  }
+  else
+  {
+    uart0_sendStr("CONNECT\r\n");
+  }
   at_backOk;
-  uart0_sendStr("Linked\r\n");
+//  uart0_sendStr("Linked\r\n");//////////////////
+
   specialAtState = TRUE;
   at_state = at_statIdle;
 }
@@ -313,8 +424,12 @@ at_tcpclient_recon_cb(void *arg, sint8 errType)
   at_linkConType *linkTemp = (at_linkConType *)pespconn->reverse;
   struct ip_info ipconfig;
   os_timer_t sta_timer;
+  char temp[16];
 
-  os_printf("at_tcpclient_recon_cb %p\r\n", arg);
+//  os_printf("at_tcpclient_recon_cb %p\r\n", arg);
+
+  os_sprintf(temp,"%d,CLOSED\r\n", linkTemp->linkId);
+  uart0_sendStr(temp);
 
   if(linkTemp->teToff == TRUE)
   {
@@ -331,7 +446,7 @@ at_tcpclient_recon_cb(void *arg, sint8 errType)
     {
       at_backOk;
       mdState = m_unlink; //////////////////////
-      uart0_sendStr("Unlink\r\n");
+//      uart0_sendStr("Unlink\r\n");
       disAllFlag = false;
       specialAtState = TRUE;
       at_state = at_statIdle;
@@ -368,7 +483,7 @@ at_tcpclient_recon_cb(void *arg, sint8 errType)
       {
         mdState = m_unlink; //////////////////////
 
-        uart0_sendStr("Unlink\r\n");
+//        uart0_sendStr("Unlink\r\n");
         //    specialAtState = true;
         //    at_state = at_statIdle;
         disAllFlag = false;
@@ -405,6 +520,7 @@ at_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
 {
   struct espconn *pespconn = (struct espconn *) arg;
   at_linkConType *linkTemp = (at_linkConType *) pespconn->reverse;
+  char temp[16];
 
   if(ipaddr == NULL)
   {
@@ -433,10 +549,13 @@ at_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
     else
     {
       os_memcpy(pespconn->proto.udp->remote_ip, &ipaddr->addr, 4);
+      os_memcpy(linkTemp->remoteIp, &ipaddr->addr, 4);
       espconn_connect(pespconn);
       specialAtState = TRUE;
       at_state = at_statIdle;
       at_linkNum++;
+      os_sprintf(temp,"%d,CONNECT\r\n", linkTemp->linkId);
+      uart0_sendStr(temp);
       at_backOk;
     }
   }
@@ -457,8 +576,11 @@ at_setupCmdCipstart(uint8_t id, char *pPara)
   enum espconn_type linkType = ESPCONN_INVALID;
   uint32_t ip = 0;
   char ipTemp[128];
-  int32_t port;
+  int32_t remotePort,localPort;
   uint8_t linkID;
+  uint8_t changType;
+
+  char ret;
 
 //  if(mdState != m_unlink)
 //  {
@@ -510,6 +632,7 @@ at_setupCmdCipstart(uint8_t id, char *pPara)
   }
   pPara += (len+3);
   len = at_dataStrCpy(ipTemp, pPara, 64);
+  os_printf("%s\r\n", ipTemp);
   if(len == -1)
   {
     uart0_sendStr("IP ERROR\r\n");
@@ -522,7 +645,44 @@ at_setupCmdCipstart(uint8_t id, char *pPara)
     return;
   }
   pPara += (1);
-  port = atoi(pPara);
+  remotePort = atoi(pPara);
+
+  if(linkType == ESPCONN_UDP)
+  {
+    os_printf("remote port:%d\r\n", remotePort);
+    pPara = strchr(pPara, ',');
+    if(pPara == NULL)
+    {
+      if((remotePort == 0)|(ipTemp[0] == 0))
+      {
+        uart0_sendStr("Miss param\r\n");
+        return;
+      }
+    }
+    else
+    {
+      pPara += 1;
+      localPort = atoi(pPara);
+      if(localPort == 0)
+      {
+        uart0_sendStr("Miss param2\r\n");
+        return;
+      }
+      os_printf("local port:%d\r\n", localPort);
+
+      pPara = strchr(pPara, ',');
+      if(pPara == NULL)
+      {
+        changType = 0;
+      }
+      else
+      {
+        pPara += 1;
+        changType = atoi(pPara);
+      }
+      os_printf("change type:%d\r\n", changType);
+    }
+  }
 
   if(pLink[linkID].linkEn)
   {
@@ -538,14 +698,14 @@ at_setupCmdCipstart(uint8_t id, char *pPara)
   pLink[linkID].pCon->type = linkType;
   pLink[linkID].pCon->state = ESPCONN_NONE;
   pLink[linkID].linkId = linkID;
-  ip = ipaddr_addr(ipTemp);
 
   switch(linkType)
   {
   case ESPCONN_TCP:
+    ip = ipaddr_addr(ipTemp);
     pLink[linkID].pCon->proto.tcp = (esp_tcp *)os_zalloc(sizeof(esp_tcp));
     pLink[linkID].pCon->proto.tcp->local_port = espconn_port();
-    pLink[linkID].pCon->proto.tcp->remote_port = port;
+    pLink[linkID].pCon->proto.tcp->remote_port = remotePort;
 
     os_memcpy(pLink[linkID].pCon->proto.tcp->remote_ip, &ip, 4);
 
@@ -567,9 +727,25 @@ at_setupCmdCipstart(uint8_t id, char *pPara)
 
   case ESPCONN_UDP:
     pLink[linkID].pCon->proto.udp = (esp_udp *)os_zalloc(sizeof(esp_udp));
-    pLink[linkID].pCon->proto.udp->local_port = espconn_port();
-    pLink[linkID].pCon->proto.udp->remote_port = port;
-    os_memcpy(pLink[linkID].pCon->proto.udp->remote_ip, &ip, 4);
+    if(localPort == 0)
+    {
+      pLink[linkID].pCon->proto.udp->local_port = espconn_port();
+    }
+    else
+    {
+      pLink[linkID].pCon->proto.udp->local_port = localPort;
+    }
+    if(remotePort == 0)
+    {
+      pLink[linkID].pCon->proto.udp->remote_port = espconn_port();
+    }
+    else
+    {
+      pLink[linkID].pCon->proto.udp->remote_port = remotePort;
+    }
+
+    pLink[linkID].changType = changType;
+    pLink[linkID].remotePort = pLink[linkID].pCon->proto.udp->remote_port;
 
     pLink[linkID].pCon->reverse = &pLink[linkID];
 //    os_printf("%d\r\n",pLink[linkID].pCon->proto.udp->local_port);///
@@ -577,8 +753,19 @@ at_setupCmdCipstart(uint8_t id, char *pPara)
     pLink[linkID].linkId = linkID;
     pLink[linkID].linkEn = TRUE;
     pLink[linkID].teType = teClient;
-    espconn_regist_recvcb(pLink[linkID].pCon, at_tcpclient_recv);
+    espconn_regist_recvcb(pLink[linkID].pCon, at_udpclient_recv);
     espconn_regist_sentcb(pLink[linkID].pCon, at_tcpclient_sent_cb);
+    if(ipTemp[0] == 0)
+    {
+      ip = 0xffffffff;
+      os_memcpy(ipTemp,"255.255.255.255",16);
+    }
+    else
+    {
+      ip = ipaddr_addr(ipTemp);
+    }
+    os_memcpy(pLink[linkID].pCon->proto.udp->remote_ip, &ip, 4);
+    os_memcpy(pLink[linkID].remoteIp, &ip, 4);
     if((ip == 0xffffffff) && (os_memcmp(ipTemp,"255.255.255.255",16) != 0))
     {
       specialAtState = FALSE;
@@ -586,7 +773,10 @@ at_setupCmdCipstart(uint8_t id, char *pPara)
     }
     else
     {
-      espconn_create(pLink[linkID].pCon);
+      ret = espconn_create(pLink[linkID].pCon);
+//      os_printf("udp create ret:%d\r\n", ret);
+      os_sprintf(temp,"%d,CONNECT\r\n", linkID);
+      uart0_sendStr(temp);
       at_linkNum++;
       at_backOk;
     }
@@ -612,6 +802,7 @@ at_tcpclient_discon_cb(void *arg)
   struct espconn *pespconn = (struct espconn *)arg;
   at_linkConType *linkTemp = (at_linkConType *)pespconn->reverse;
   uint8_t idTemp;
+  char temp[16];
 
   if(pespconn == NULL)
   {
@@ -624,7 +815,17 @@ at_tcpclient_discon_cb(void *arg)
   os_free(pespconn);
 
   linkTemp->linkEn = FALSE;
-  os_printf("disconnect\r\n");
+//  os_printf("disconnect\r\n");
+  if(at_ipMux)
+  {
+    os_sprintf(temp,"%d,CLOSED\r\n", linkTemp->linkId);
+    uart0_sendStr(temp);
+  }
+  else
+  {
+    uart0_sendStr("CLOSED\r\n");
+  }
+
 //  os_printf("con EN? %d\r\n", pLink[0].linkEn);
   at_linkNum--;
 
@@ -639,7 +840,7 @@ at_tcpclient_discon_cb(void *arg)
     {
       at_backOk;
     }
-    uart0_sendStr("Unlink\r\n");
+//    uart0_sendStr("Unlink\r\n");
     ETS_UART_INTR_ENABLE(); /////transparent is over
 //    specialAtState = TRUE;
 //    at_state = at_statIdle;
@@ -668,6 +869,8 @@ at_tcpclient_discon_cb(void *arg)
         }
         else
         {
+          os_sprintf(temp,"%d,CLOSED\r\n", pLink[idTemp].linkId);
+          uart0_sendStr(temp);
           pLink[idTemp].linkEn = FALSE;
           espconn_delete(pLink[idTemp].pCon);
           os_free(pLink[idTemp].pCon->proto.udp);
@@ -677,7 +880,7 @@ at_tcpclient_discon_cb(void *arg)
           {
             mdState = m_unlink;
             at_backOk;
-            uart0_sendStr("Unlink\r\n");
+//            uart0_sendStr("Unlink\r\n");
             disAllFlag = FALSE;
 //            specialAtState = TRUE;
 //            at_state = at_statIdle;
@@ -763,6 +966,8 @@ at_setupCmdCipclose(uint8_t id, char *pPara)
         else
         {
           pLink[linkID].linkEn = FALSE;
+          os_sprintf(temp,"%d,CLOSED\r\n", linkID);
+          uart0_sendStr(temp);
           espconn_delete(pLink[linkID].pCon);
           os_free(pLink[linkID].pCon->proto.udp);///
           os_free(pLink[linkID].pCon);
@@ -771,7 +976,7 @@ at_setupCmdCipclose(uint8_t id, char *pPara)
           {
             mdState = m_unlink;
             at_backOk;
-            uart0_sendStr("Unlink\r\n");
+//            uart0_sendStr("Unlink\r\n");
           }
         }
       }
@@ -795,13 +1000,15 @@ at_setupCmdCipclose(uint8_t id, char *pPara)
       else
       {
         pLink[linkID].linkEn = FALSE;
+        os_sprintf(temp,"%d,CLOSED\r\n", linkID);
+        uart0_sendStr(temp);
         espconn_delete(pLink[linkID].pCon);
         at_linkNum--;
         at_backOk;
         if(at_linkNum == 0)
         {
           mdState = m_unlink;
-          uart0_sendStr("Unlink\r\n");
+//          uart0_sendStr("Unlink\r\n");
         }
       }
     }
@@ -816,6 +1023,8 @@ at_setupCmdCipclose(uint8_t id, char *pPara)
       else
       {
         pLink[linkID].linkEn = FALSE;
+        os_sprintf(temp,"%d,CLOSED\r\n", linkID);
+        uart0_sendStr(temp);
         espconn_delete(pLink[linkID].pCon);
         os_free(pLink[linkID].pCon->proto.udp);
         os_free(pLink[linkID].pCon);
@@ -824,7 +1033,7 @@ at_setupCmdCipclose(uint8_t id, char *pPara)
         if(at_linkNum == 0)
         {
           mdState = m_unlink;
-          uart0_sendStr("Unlink\r\n");
+//          uart0_sendStr("Unlink\r\n");
         }
       }
     }
@@ -889,6 +1098,7 @@ at_exeCmdCipclose(uint8_t id)
       else
       {
         pLink[0].linkEn = FALSE;
+        uart0_sendStr("CLOSED\r\n");
         espconn_delete(pLink[0].pCon);
         os_free(pLink[0].pCon->proto.udp);
         os_free(pLink[0].pCon);
@@ -897,7 +1107,7 @@ at_exeCmdCipclose(uint8_t id)
         {
           mdState = m_unlink;
           at_backOk;
-          uart0_sendStr("Unlink\r\n");
+//          uart0_sendStr("Unlink\r\n");
         }
       }
     }
@@ -1027,6 +1237,7 @@ void ICACHE_FLASH_ATTR
 at_ipDataSending(uint8_t *pAtRcvData)
 {
   espconn_sent(pLink[sendingID].pCon, pAtRcvData, at_sendLen);
+  os_printf("id:%d,Len:%d,dp:%p\r\n",sendingID,at_sendLen,pAtRcvData);
   //bug if udp,send is ok
 //  if(pLink[sendingID].pCon->type == ESPCONN_UDP)
 //  {
@@ -1204,6 +1415,7 @@ at_tcpserver_discon_cb(void *arg)
 {
   struct espconn *pespconn = (struct espconn *) arg;
   at_linkConType *linkTemp = (at_linkConType *) pespconn->reverse;
+  char temp[16];
 
   os_printf("S conect C: %p\r\n", arg);
 
@@ -1214,21 +1426,32 @@ at_tcpserver_discon_cb(void *arg)
 
   linkTemp->linkEn = FALSE;
   linkTemp->pCon = NULL;
-  os_printf("con EN? %d\r\n", linkTemp->linkId);
+//  os_printf("con EN? %d\r\n", linkTemp->linkId);
+  if(at_ipMux)
+  {
+    os_sprintf(temp,"%d,CLOSED\r\n", linkTemp->linkId);
+    uart0_sendStr(temp);
+  }
+  else
+  {
+    uart0_sendStr("CLOSED\r\n");
+  }
   if(linkTemp->teToff == TRUE)
   {
     linkTemp->teToff = FALSE;
-    specialAtState = true;
-    at_state = at_statIdle;
+//    specialAtState = true;
+//    at_state = at_statIdle;
     at_backOk;
   }
   at_linkNum--;
   if (at_linkNum == 0)
   {
     mdState = m_unlink;
-    uart0_sendStr("Unlink\r\n");
+//    uart0_sendStr("Unlink\r\n");
     disAllFlag = false;
   }
+  specialAtState = true;
+  at_state = at_statIdle;
 }
 
 /**
@@ -1241,6 +1464,7 @@ at_tcpserver_recon_cb(void *arg, sint8 errType)
 {
   struct espconn *pespconn = (struct espconn *)arg;
   at_linkConType *linkTemp = (at_linkConType *)pespconn->reverse;
+  char temp[16];
 
   os_printf("S conect C: %p\r\n", arg);
 
@@ -1256,17 +1480,30 @@ at_tcpserver_recon_cb(void *arg, sint8 errType)
   if (at_linkNum == 0)
   {
     mdState = m_unlink; //////////////////////
-
-    uart0_sendStr("Unlink\r\n");
-    disAllFlag = false;
   }
+
+  if(at_ipMux)
+  {
+    os_sprintf(temp, "%d,CONNECT\r\n", linkTemp->linkId);
+    uart0_sendStr(temp);
+  }
+  else
+  {
+    uart0_sendStr("CONNECT\r\n");
+  }
+
+//    uart0_sendStr("Unlink\r\n");
+  disAllFlag = false;
+
   if(linkTemp->teToff == TRUE)
   {
     linkTemp->teToff = FALSE;
-    specialAtState = true;
-    at_state = at_statIdle;
+//    specialAtState = true;
+//    at_state = at_statIdle;
     at_backOk;
   }
+  specialAtState = true;
+  at_state = at_statIdle;
 }
 
 /**
@@ -1279,6 +1516,7 @@ at_tcpserver_listen(void *arg)
 {
   struct espconn *pespconn = (struct espconn *)arg;
   uint8_t i;
+  char temp[16];
 
   os_printf("get tcpClient:\r\n");
   for(i=0;i<at_linkMax;i++)
@@ -1305,60 +1543,69 @@ at_tcpserver_listen(void *arg)
   espconn_regist_reconcb(pespconn, at_tcpserver_recon_cb);
   espconn_regist_disconcb(pespconn, at_tcpserver_discon_cb);
   espconn_regist_sentcb(pespconn, at_tcpclient_sent_cb);///////
-  uart0_sendStr("Link\r\n");
+  if(at_ipMux)
+  {
+    os_sprintf(temp, "%d,CONNECT\r\n", i);
+    uart0_sendStr(temp);
+  }
+  else
+  {
+    uart0_sendStr("CONNECT\r\n");
+  }
+//  uart0_sendStr("Link\r\n");
 }
 
-/**
-  * @brief  Udp server receive data callback function.
-  * @param  arg: contain the ip link information
-  * @retval None
-  */
-LOCAL void ICACHE_FLASH_ATTR
-at_udpserver_recv(void *arg, char *pusrdata, unsigned short len)
-{
-  struct espconn *pespconn = (struct espconn *)arg;
-  at_linkConType *linkTemp;
-  char temp[32];
-  uint8_t i;
-
-  os_printf("get udpClient:\r\n");
-
-  if(pespconn->reverse == NULL)
-  {
-    for(i = 0;i < at_linkMax;i++)
-    {
-      if(pLink[i].linkEn == FALSE)
-      {
-        pLink[i].linkEn = TRUE;
-        break;
-      }
-    }
-    if(i >= 5)
-    {
-      return;
-    }
-    pLink[i].teToff = FALSE;
-    pLink[i].linkId = i;
-    pLink[i].teType = teServer;
-    pLink[i].repeaTime = 0;
-    pLink[i].pCon = pespconn;
-    espconn_regist_sentcb(pLink[i].pCon, at_tcpclient_sent_cb);
-    mdState = m_linked;
-    at_linkNum++;
-    pespconn->reverse = &pLink[i];
-    uart0_sendStr("Link\r\n");
-  }
-  linkTemp = (at_linkConType *)pespconn->reverse;
-  if(pusrdata == NULL)
-  {
-    return;
-  }
-  os_sprintf(temp, "\r\n+IPD,%d,%d:",
-             linkTemp->linkId, len);
-  uart0_sendStr(temp);
-  uart0_tx_buffer(pusrdata, len);
-  at_backOk;
-}
+///**
+//  * @brief  Udp server receive data callback function.
+//  * @param  arg: contain the ip link information
+//  * @retval None
+//  */
+//LOCAL void ICACHE_FLASH_ATTR
+//at_udpserver_recv(void *arg, char *pusrdata, unsigned short len)
+//{
+//  struct espconn *pespconn = (struct espconn *)arg;
+//  at_linkConType *linkTemp;
+//  char temp[32];
+//  uint8_t i;
+//
+//  os_printf("get udpClient:\r\n");
+//
+//  if(pespconn->reverse == NULL)
+//  {
+//    for(i = 0;i < at_linkMax;i++)
+//    {
+//      if(pLink[i].linkEn == FALSE)
+//      {
+//        pLink[i].linkEn = TRUE;
+//        break;
+//      }
+//    }
+//    if(i >= 5)
+//    {
+//      return;
+//    }
+//    pLink[i].teToff = FALSE;
+//    pLink[i].linkId = i;
+//    pLink[i].teType = teServer;
+//    pLink[i].repeaTime = 0;
+//    pLink[i].pCon = pespconn;
+//    espconn_regist_sentcb(pLink[i].pCon, at_tcpclient_sent_cb);
+//    mdState = m_linked;
+//    at_linkNum++;
+//    pespconn->reverse = &pLink[i];
+//    uart0_sendStr("Link\r\n");
+//  }
+//  linkTemp = (at_linkConType *)pespconn->reverse;
+//  if(pusrdata == NULL)
+//  {
+//    return;
+//  }
+//  os_sprintf(temp, "\r\n+IPD,%d,%d:",
+//             linkTemp->linkId, len);
+//  uart0_sendStr(temp);
+//  uart0_tx_buffer(pusrdata, len);
+//  at_backOk;
+//}
 
 /**
   * @brief  Setup commad of module as server.
@@ -1428,19 +1675,19 @@ at_setupCmdCipserver(uint8_t id, char *pPara)
     espconn_accept(pTcpServer);
     espconn_regist_time(pTcpServer, server_timeover, 0);
 
-    pUdpServer = (struct espconn *)os_zalloc(sizeof(struct espconn));
-    if (pUdpServer == NULL)
-    {
-      uart0_sendStr("UdpServer Failure\r\n");
-      return;
-    }
-    pUdpServer->type = ESPCONN_UDP;
-    pUdpServer->state = ESPCONN_NONE;
-    pUdpServer->proto.udp = (esp_udp *)os_zalloc(sizeof(esp_udp));
-    pUdpServer->proto.udp->local_port = port;
-    pUdpServer->reverse = NULL;
-    espconn_regist_recvcb(pUdpServer, at_udpserver_recv);
-    espconn_create(pUdpServer);
+//    pUdpServer = (struct espconn *)os_zalloc(sizeof(struct espconn));
+//    if (pUdpServer == NULL)
+//    {
+//      uart0_sendStr("UdpServer Failure\r\n");
+//      return;
+//    }
+//    pUdpServer->type = ESPCONN_UDP;
+//    pUdpServer->state = ESPCONN_NONE;
+//    pUdpServer->proto.udp = (esp_udp *)os_zalloc(sizeof(esp_udp));
+//    pUdpServer->proto.udp->local_port = port;
+//    pUdpServer->reverse = NULL;
+//    espconn_regist_recvcb(pUdpServer, at_udpserver_recv);
+//    espconn_create(pUdpServer);
 
 //    if(pLink[0].linkEn)
 //    {
@@ -1577,7 +1824,7 @@ Authorization: token %s\r\n\
 Accept-Encoding: gzip,deflate,sdch\r\n\
 Accept-Language: zh-CN,zh;q=0.8\r\n\r\n"
 
-//#define test
+#define test
 #ifdef test
 #define KEY "39cdfe29a1863489e788efc339f514d78b78f0de"
 #else
@@ -1962,7 +2209,7 @@ upServer_dns_found(const char *name, ip_addr_t *ipaddr, void *arg)
 }
 
 void ICACHE_FLASH_ATTR
-at_exeCmdUpdate(uint8_t id)
+at_exeCmdCiupdate(uint8_t id)
 {
   pespconn = (struct espconn *)os_zalloc(sizeof(struct espconn));
   pespconn->type = ESPCONN_TCP;

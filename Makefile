@@ -28,7 +28,7 @@ SUBDIRS=    \
 endif # } PDIR
 
 APPDIR = .
-LDDIR = ../ld
+LDDIR = ../ld/
 
 CCFLAGS += -Os
 
@@ -46,15 +46,6 @@ ifeq ($(FLAVOR),release)
     TARGET_LDFLAGS += -g -O0
 endif
 
-LD_FILE = $(LDDIR)/eagle.app.v6.ld
-
-ifeq ($(APP), 1)
-	LD_FILE = $(LDDIR)/eagle.app.v6.app1.ld
-endif
-
-ifeq ($(APP), 2)
-	LD_FILE = $(LDDIR)/eagle.app.v6.app2.ld
-endif
 
 COMPONENTS_eagle.app.v6 = \
 	user/libuser.a	\
@@ -63,7 +54,7 @@ COMPONENTS_eagle.app.v6 = \
 LINKFLAGS_eagle.app.v6 = \
 	-L../lib        \
 	-nostdlib	\
-    -T$(LD_FILE)   \
+    -T$(LDDIR)/eagle.app.v6.ld   \
 	-Wl,--no-check-sections	\
     -u call_user_start	\
 	-Wl,-static						\
@@ -72,6 +63,7 @@ LINKFLAGS_eagle.app.v6 = \
 	-lgcc					\
 	-lhal					\
 	-lphy	\
+	-lpp	\
 	-lnet80211	\
 	-llwip	\
 	-lwpa	\
@@ -82,7 +74,7 @@ LINKFLAGS_eagle.app.v6 = \
 	-Wl,--end-group
 
 DEPENDS_eagle.app.v6 = \
-                $(LD_FILE) \
+                $(LDDIR)/eagle.app.v6.ld \
                 $(LDDIR)/eagle.rom.addr.v6.ld
 
 #############################################################
