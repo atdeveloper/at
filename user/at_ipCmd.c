@@ -191,11 +191,12 @@ at_exeCmdCipstatus(uint8_t id)
       }
       else
       {
-        os_sprintf(temp, "%s:%d,\"UDP\",\"%d.%d.%d.%d\",%d,%d\r\n",
+        os_sprintf(temp, "%s:%d,\"UDP\",\"%d.%d.%d.%d\",%d,%d,%d\r\n",
                    at_fun[id].at_cmdName,
                    pLink[i].linkId,
                    IP2STR(pLink[i].pCon->proto.udp->remote_ip),
                    pLink[i].pCon->proto.udp->remote_port,
+                   pLink[i].pCon->proto.udp->local_port,
                    pLink[i].teType);
         uart0_sendStr(temp);
       }
@@ -587,6 +588,8 @@ at_setupCmdCipstart(uint8_t id, char *pPara)
 //    uart0_sendStr("no ip\r\n");
 //    return;
 //  }
+  remotePort = 0;
+  localPort = 0;
   if(at_wifiMode == 1)
   {
     if(wifi_station_get_connect_status() != STATION_GOT_IP)
