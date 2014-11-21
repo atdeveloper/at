@@ -397,6 +397,10 @@ at_tcpclient_connect_cb(void *arg)
 
   mdState = m_linked;
 //  at_linkNum++;
+  if(at_state == at_statIpTraning)
+ 	{
+ 		return;
+  }
   if(at_ipMux)
   {
     os_sprintf(temp,"%d,CONNECT\r\n", linkTemp->linkId);
@@ -456,6 +460,14 @@ at_tcpclient_recon_cb(void *arg, sint8 errType)
   else
   {
     linkTemp->repeaTime++;
+    if(at_state == at_statIpTraning)
+    {
+      ETS_UART_INTR_ENABLE(); ///
+      os_printf("Traning recon\r\n");
+      pespconn->proto.tcp->local_port = espconn_port();
+      espconn_connect(pespconn);
+      return;
+    }
     if(linkTemp->repeaTime >= 1)
     {
       os_printf("repeat over %d\r\n", linkTemp->repeaTime);
@@ -488,15 +500,19 @@ at_tcpclient_recon_cb(void *arg, sint8 errType)
         //    specialAtState = true;
         //    at_state = at_statIdle;
         disAllFlag = false;
-        ETS_UART_INTR_ENABLE(); //exception disconnect
+//        ETS_UART_INTR_ENABLE(); //exception disconnect
         //    specialAtState = true;
         //    at_state = at_statIdle;
         //    return;
       }
+      ETS_UART_INTR_ENABLE(); ///
       specialAtState = true;
       at_state = at_statIdle;
       return;
     }
+
+    specialAtState = true;
+    at_state = at_statIdle;
     os_printf("link repeat %d\r\n", linkTemp->repeaTime);
     pespconn->proto.tcp->local_port = espconn_port();
     espconn_connect(pespconn);
@@ -811,6 +827,14 @@ at_tcpclient_discon_cb(void *arg)
   {
     return;
   }
+  if(at_state == at_statIpTraning)
+  {
+    ETS_UART_INTR_ENABLE(); ///
+    os_printf("Traning nodiscon\r\n");
+    pespconn->proto.tcp->local_port = espconn_port();
+    espconn_connect(pespconn);
+    return;
+  }
   if(pespconn->proto.tcp != NULL)
   {
     os_free(pespconn->proto.tcp);
@@ -844,7 +868,7 @@ at_tcpclient_discon_cb(void *arg)
       at_backOk;
     }
 //    uart0_sendStr("Unlink\r\n");
-    ETS_UART_INTR_ENABLE(); /////transparent is over
+//    ETS_UART_INTR_ENABLE(); /////transparent is over
 //    specialAtState = TRUE;
 //    at_state = at_statIdle;
     disAllFlag = FALSE;
@@ -893,6 +917,7 @@ at_tcpclient_discon_cb(void *arg)
       }
     }
   }
+  ETS_UART_INTR_ENABLE(); 
 //  IPMODE = FALSE;
   specialAtState = TRUE;
   at_state = at_statIdle;
@@ -1096,6 +1121,7 @@ at_exeCmdCipclose(uint8_t id)
       if(pLink[0].pCon->type == ESPCONN_TCP)
       {
         specialAtState = FALSE;
+        pLink[0].teToff = TRUE;
         espconn_disconnect(pLink[0].pCon);
       }
       else
@@ -1453,6 +1479,7 @@ at_tcpserver_discon_cb(void *arg)
 //    uart0_sendStr("Unlink\r\n");
     disAllFlag = false;
   }
+  ETS_UART_INTR_ENABLE();
   specialAtState = true;
   at_state = at_statIdle;
 }
@@ -1505,6 +1532,7 @@ at_tcpserver_recon_cb(void *arg, sint8 errType)
 //    at_state = at_statIdle;
     at_backOk;
   }
+  ETS_UART_INTR_ENABLE();
   specialAtState = true;
   at_state = at_statIdle;
 }
