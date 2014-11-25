@@ -6,7 +6,7 @@
 #include "at_ipCmd.h"
 #include "at_baseCmd.h"
 
-#define at_cmdNum   24
+#define at_cmdNum   25
 
 at_funcationType at_fun[at_cmdNum]={
   {NULL, 0, NULL, NULL, NULL, at_exeCmdNull},
@@ -33,6 +33,7 @@ at_funcationType at_fun[at_cmdNum]={
   {"+CIPMODE", 8, NULL, at_queryCmdCipmode, at_setupCmdCipmode, NULL},
   {"+CIPSTO", 7, NULL, at_queryCmdCipsto, at_setupCmdCipsto, NULL},
   {"+CIUPDATE", 9, NULL, NULL, NULL, at_exeCmdCiupdate},
+  {"+CIPING", 7, NULL, NULL, NULL, at_exeCmdCiping},
 #ifdef ali
   {"+MPINFO", 7, NULL, NULL, at_setupCmdMpinfo, NULL}
 #endif
