@@ -2256,6 +2256,7 @@ at_exeCmdCiupdate(uint8_t id)
 void ICACHE_FLASH_ATTR
 at_exeCmdCiping(uint8_t id)
 {
+	at_backOk;
 }
 
 /**
