@@ -245,6 +245,17 @@ at_setupCmdIpr(uint8_t id, char *pPara)
 //  //  spi_flash_read(60 * 4096, (uint32 *)&upFlag, sizeof(updateFlagType));
   at_backOk;
 }
+
+void ICACHE_FLASH_ATTR
+at_setupCmdGslp(uint8_t id, char *pPara)
+{
+	uint32_t n;
+	pPara++;
+	
+	n = atoi(pPara);
+	at_backOk;
+	system_deep_sleep(n*1000);
+}
 /**
   * @}
   */

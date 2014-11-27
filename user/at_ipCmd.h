@@ -55,4 +55,6 @@ void at_exeCmdCiupdate(uint8_t id);
 
 void at_exeCmdCiping(uint8_t id);
 
+void at_exeCmdCipappup(uint8_t id);
+
 #endif

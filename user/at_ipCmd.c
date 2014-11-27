@@ -2250,6 +2250,12 @@ at_exeCmdCiping(uint8_t id)
 	at_backOk;
 }
 
+void ICACHE_FLASH_ATTR
+at_exeCmdCipappup(uint8_t id)
+{
+	
+}
+
 /**
   * @}
   */

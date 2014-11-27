@@ -12,4 +12,7 @@ void at_setupCmdIpr(uint8_t id, char *pPara);
 #ifdef ali
 void at_setupCmdMpinfo(uint8_t id, char *pPara);
 #endif
+
+void at_setupCmdGslp(uint8_t id, char *pPara);
+
 #endif
