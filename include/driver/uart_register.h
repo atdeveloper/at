@@ -15,12 +15,6 @@
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-//Generated at 2012-07-03 18:44:06
-/*
- *  Copyright (c) 2010 - 2011 Espressif System
- *
- */
-
 #ifndef UART_REGISTER_H_INCLUDED
 #define UART_REGISTER_H_INCLUDED
 #define REG_UART_BASE( i )  (0x60000000+(i)*0xf00)

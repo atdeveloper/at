@@ -36,7 +36,7 @@ extern uint16_t at_sendLen;
 extern uint16_t at_tranLen;
 //extern UartDevice UartDev;
 //extern bool IPMODE;
-extern os_timer_t at_delayChack;
+extern os_timer_t at_delayCheck;
 extern uint8_t ipDataSendFlag;
 /**
   * @}
@@ -181,11 +181,11 @@ at_recvTask(os_event_t *events)
       break;
 
     case at_statIpTraning:
-      os_timer_disarm(&at_delayChack);
+      os_timer_disarm(&at_delayCheck);
 //      *pDataLine = temp;
       if(pDataLine > &at_dataLine[at_dataLenMax - 1])
       {
-        os_timer_arm(&at_delayChack, 0, 0);
+        os_timer_arm(&at_delayCheck, 0, 0);
         os_printf("exceed\r\n");
         return;
       }
@@ -195,7 +195,7 @@ at_recvTask(os_event_t *events)
         *pDataLine = temp;
         pDataLine++;
         at_tranLen++;
-        os_timer_arm(&at_delayChack, 0, 0);
+        os_timer_arm(&at_delayCheck, 0, 0);
         return;
       }
       else
@@ -206,20 +206,20 @@ at_recvTask(os_event_t *events)
         at_tranLen++;
 //        if(ipDataSendFlag == 0)
 //        {
-//          os_timer_arm(&at_delayChack, 20, 0);
+//          os_timer_arm(&at_delayCheck, 20, 0);
 //        }
-        os_timer_arm(&at_delayChack, 20, 0);
+        os_timer_arm(&at_delayCheck, 20, 0);
       }
       break;
 
-//      os_timer_disarm(&at_delayChack);
+//      os_timer_disarm(&at_delayCheck);
 //      *pDataLine = temp;
 //      if(pDataLine >= &at_dataLine[at_dataLenMax - 1])
 //      {
 ////        ETS_UART_INTR_DISABLE();
 ////      pDataLine++;
 //        at_tranLen++;
-////      os_timer_arm(&at_delayChack, 1, 0); /////
+////      os_timer_arm(&at_delayCheck, 1, 0); /////
 //        system_os_post(at_procTaskPrio, 0, 0);
 //        break;
 //      }
@@ -227,7 +227,7 @@ at_recvTask(os_event_t *events)
 //      at_tranLen++;
 //      if(ipDataSendFlag == 0)
 //      {
-//        os_timer_arm(&at_delayChack, 20, 0);
+//        os_timer_arm(&at_delayCheck, 20, 0);
 //      }
 //      break;
 

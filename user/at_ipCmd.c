@@ -39,7 +39,7 @@ extern int8_t at_dataStrCpy(void *pDest, const void *pSrc, int8_t maxLen);
 
 uint16_t at_sendLen; //now is 256
 uint16_t at_tranLen; //now is 256
-os_timer_t at_delayChack;
+os_timer_t at_delayCheck;
 BOOL IPMODE;
 uint8_t ipDataSendFlag = 0;
 
@@ -355,8 +355,8 @@ at_tcpclient_sent_cb(void *arg)
   if(IPMODE == TRUE)
   {
     ipDataSendFlag = 0;
-  	os_timer_disarm(&at_delayChack);
-  	os_timer_arm(&at_delayChack, 20, 0);
+  	os_timer_disarm(&at_delayCheck);
+  	os_timer_arm(&at_delayCheck, 20, 0);
   	system_os_post(at_recvTaskPrio, 0, 0); ////
     ETS_UART_INTR_ENABLE();
     return;
@@ -379,8 +379,8 @@ at_tcpclient_sent_cb(void *arg)
 //  if(IPMODE == TRUE)
 //  {
 //    ipDataSendFlag = 0;
-//    os_timer_disarm(&at_delayChack);
-//    os_timer_arm(&at_delayChack, 20, 0);
+//    os_timer_disarm(&at_delayCheck);
+//    os_timer_arm(&at_delayCheck, 20, 0);
 //    system_os_post(at_recvTaskPrio, 0, 0); ////
 //    ETS_UART_INTR_ENABLE();
 //    return;
@@ -1310,7 +1310,7 @@ at_ipDataTransparent(void *arg)
 //	  return;
 //	}
 //	ETS_UART_INTR_DISABLE(); //
-	os_timer_disarm(&at_delayChack);
+	os_timer_disarm(&at_delayCheck);
 	if((at_tranLen == 3) && (os_memcmp(at_dataLine, "+++", 3) == 0)) //UartDev.rcv_buff.pRcvMsgBuff
 	{
 //	  ETS_UART_INTR_DISABLE(); //
@@ -1330,7 +1330,7 @@ at_ipDataTransparent(void *arg)
   	at_tranLen = 0;
   	return;
   }
-  os_timer_arm(&at_delayChack, 20, 0);
+  os_timer_arm(&at_delayCheck, 20, 0);
 //  system_os_post(at_recvTaskPrio, 0, 0); ////
 //  ETS_UART_INTR_ENABLE();
 }
@@ -1376,9 +1376,9 @@ at_exeCmdCipsend(uint8_t id)
 	at_tranLen = 0;
   specialAtState = FALSE;
   at_state = at_statIpTraning;
-  os_timer_disarm(&at_delayChack);
-  os_timer_setfn(&at_delayChack, (os_timer_func_t *)at_ipDataTransparent, NULL);
-  os_timer_arm(&at_delayChack, 20, 0);
+  os_timer_disarm(&at_delayCheck);
+  os_timer_setfn(&at_delayCheck, (os_timer_func_t *)at_ipDataTransparent, NULL);
+  os_timer_arm(&at_delayCheck, 20, 0);
 //  IPMODE = TRUE;
   uart0_sendStr("\r\n>");
 }
@@ -2031,7 +2031,7 @@ at_upDate_recv(void *arg, char *pusrdata, unsigned short len)
 //  uint8_t devkey[41] = {0};
   uint8_t i;
 
-  os_timer_disarm(&at_delayChack);
+  os_timer_disarm(&at_delayCheck);
 //  os_printf("get upRom:\r\n");
   uart0_sendStr("+CIPUPDATE:3\r\n");
 
@@ -2088,7 +2088,7 @@ LOCAL void ICACHE_FLASH_ATTR
 at_upDate_wait(void *arg)
 {
   struct espconn *pespconn = arg;
-  os_timer_disarm(&at_delayChack);
+  os_timer_disarm(&at_delayCheck);
   if(pespconn != NULL)
   {
     espconn_disconnect(pespconn);
@@ -2111,9 +2111,9 @@ LOCAL void ICACHE_FLASH_ATTR
 at_upDate_sent_cb(void *arg)
 {
   struct espconn *pespconn = arg;
-  os_timer_disarm(&at_delayChack);
-  os_timer_setfn(&at_delayChack, (os_timer_func_t *)at_upDate_wait, pespconn);
-  os_timer_arm(&at_delayChack, 5000, 0);
+  os_timer_disarm(&at_delayCheck);
+  os_timer_setfn(&at_delayCheck, (os_timer_func_t *)at_upDate_wait, pespconn);
+  os_timer_arm(&at_delayCheck, 5000, 0);
   os_printf("at_upDate_sent_cb\r\n");
 }
 

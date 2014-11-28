@@ -15,17 +15,6 @@
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-/******************************************************************************
- * Copyright 2013-2014 Espressif Systems (Wuxi)
- *
- * FileName: uart.c
- *
- * Description: Two UART mode configration and interrupt handler.
- *              Check your hardware connection while use this mode.
- *
- * Modification history:
- *     2014/3/12, v1.0 create this file.
-*******************************************************************************/
 #include "ets_sys.h"
 #include "osapi.h"
 #include "driver/uart.h"
