@@ -449,7 +449,21 @@ at_tcpclient_recon_cb(void *arg, sint8 errType)
   char temp[16];
 
 //  os_printf("at_tcpclient_recon_cb %p\r\n", arg);
-
+  
+  if(at_state == at_statIpTraning)
+  {
+  	linkTemp->repeaTime++;
+    ETS_UART_INTR_ENABLE(); ///
+    os_printf("Traning recon\r\n");
+    if(linkTemp->repeaTime > 10)
+    {
+    	linkTemp->repeaTime = 10; 
+    }
+    os_delay_us(linkTemp->repeaTime * 10000);
+    pespconn->proto.tcp->local_port = espconn_port();
+    espconn_connect(pespconn);
+    return;
+  }
   os_sprintf(temp,"%d,CLOSED\r\n", linkTemp->linkId);
   uart0_sendStr(temp);
 
@@ -477,14 +491,6 @@ at_tcpclient_recon_cb(void *arg, sint8 errType)
   else
   {
     linkTemp->repeaTime++;
-    if(at_state == at_statIpTraning)
-    {
-      ETS_UART_INTR_ENABLE(); ///
-      os_printf("Traning recon\r\n");
-      pespconn->proto.tcp->local_port = espconn_port();
-      espconn_connect(pespconn);
-      return;
-    }
     if(linkTemp->repeaTime >= 1)
     {
       os_printf("repeat over %d\r\n", linkTemp->repeaTime);
