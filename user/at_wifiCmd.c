@@ -1,3 +1,20 @@
+/*
+ * File	: at_wifiCmd.c
+ * This file is part of Espressif's AT+ command set program.
+ * Copyright (C) 2013 - 2016, Espressif Systems
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of version 3 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #include "user_interface.h"
 #include "at.h"
 #include "at_wifiCmd.h"
@@ -472,7 +489,6 @@ at_setupCmdCwsap(uint8_t id, char *pPara)
   int8_t len,passLen;
   struct softap_config apConfig;
 
-  os_bzero(&apConfig, sizeof(struct softap_config));
   wifi_softap_get_config(&apConfig);
 
   if(at_wifiMode == STATION_MODE)
@@ -483,6 +499,7 @@ at_setupCmdCwsap(uint8_t id, char *pPara)
   }
   pPara++;
   len = at_dataStrCpy(apConfig.ssid, pPara, 32);
+  apConfig.ssid_len = len;
 //  os_printf("%x\r\n",*pPara);/////
 //  os_printf("%s\r\n",apConfig.ssid);/////
   if(len < 1)
@@ -642,6 +659,21 @@ at_setupCmdCwdhcp(uint8_t id, char *pPara)
 }
 
 void ICACHE_FLASH_ATTR
+at_queryCmdCipstamac(uint8_t id)
+{
+	char temp[64];
+  uint8 bssid[6];
+  
+  os_sprintf(temp, "%s:", at_fun[id].at_cmdName);
+  uart0_sendStr(temp);
+
+  wifi_get_macaddr(STATION_IF, bssid);
+  os_sprintf(temp, "\""MACSTR"\"\r\n", MAC2STR(bssid));
+  uart0_sendStr(temp);
+  at_backOk;
+}
+
+void ICACHE_FLASH_ATTR
 at_setupCmdCipstamac(uint8_t id, char *pPara)
 {
 	int8_t len,i;
@@ -668,6 +700,22 @@ at_setupCmdCipstamac(uint8_t id, char *pPara)
   os_printf(MACSTR"\r\n", MAC2STR(bssid));
   wifi_set_macaddr(STATION_IF, bssid);
 	at_backOk;
+}
+
+
+void ICACHE_FLASH_ATTR
+at_queryCmdCipapmac(uint8_t id)
+{
+	char temp[64];
+  uint8 bssid[6];
+  
+  os_sprintf(temp, "%s:", at_fun[id].at_cmdName);
+  uart0_sendStr(temp);
+
+  wifi_get_macaddr(SOFTAP_IF, bssid);
+  os_sprintf(temp, "\""MACSTR"\"\r\n", MAC2STR(bssid));
+  uart0_sendStr(temp);
+  at_backOk;
 }
 
 void ICACHE_FLASH_ATTR
@@ -700,6 +748,21 @@ at_setupCmdCipapmac(uint8_t id, char *pPara)
 }
 
 void ICACHE_FLASH_ATTR
+at_queryCmdCipsta(uint8_t id)
+{
+	struct ip_info pTempIp;
+  char temp[64];
+  
+  wifi_get_ip_info(0x00, &pTempIp);
+  os_sprintf(temp, "%s:", at_fun[id].at_cmdName);
+  uart0_sendStr(temp);
+
+  os_sprintf(temp, "\"%d.%d.%d.%d\"\r\n", IP2STR(&pTempIp.ip));
+  uart0_sendStr(temp);
+  at_backOk;
+}
+
+void ICACHE_FLASH_ATTR
 at_setupCmdCipsta(uint8_t id, char *pPara)
 {
 	struct ip_info pTempIp;
@@ -729,7 +792,21 @@ at_setupCmdCipsta(uint8_t id, char *pPara)
     wifi_station_dhcpc_start();
     return;
   }
-  wifi_station_dhcpc_start();
+  at_backOk;
+}
+
+void ICACHE_FLASH_ATTR
+at_queryCmdCipap(uint8_t id)
+{
+	struct ip_info pTempIp;
+  char temp[64];
+  
+  wifi_get_ip_info(0x01, &pTempIp);
+  os_sprintf(temp, "%s:", at_fun[id].at_cmdName);
+  uart0_sendStr(temp);
+
+  os_sprintf(temp, "\"%d.%d.%d.%d\"\r\n", IP2STR(&pTempIp.ip));
+  uart0_sendStr(temp);
   at_backOk;
 }
 
