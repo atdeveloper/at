@@ -1,8 +1,7 @@
 #ifndef __AT_CONFIG_STORE_H
 #define __AT_CONFIG_STORE_H
 
-//#include <stdint.h>
-#include "c_types.h"
+#include <stdint.h>
 
 typedef struct 
 {
@@ -34,7 +33,7 @@ typedef struct
 	{
 		char remote_domain[64];
 		uint8_t remote_ip[4];
-	} remote_target;
+	};
 	int32_t remote_port;
 	int32_t local_port;
 	uint8_t reserve[2];
@@ -50,11 +49,11 @@ typedef struct
 {
 	uint8_t auto_trans;
 	uint8_t role_type;
-	union
+  union
 	{
 		atClient_t client;
 		atServer_t server;
-	} link_role;
+	};
 	uint8_t reserve[2];
 } atStart_t;
 
@@ -63,6 +62,9 @@ typedef struct
 	atSerial_t serial;
 	atWifi_t wifi_set;
 	atStart_t start;
+	int32_t crc;
 } atConfig_t;
 
+
 #endif //__AT_CONFIG_STORE_H
+
