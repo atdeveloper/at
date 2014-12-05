@@ -19,6 +19,7 @@
 #include "driver/uart.h"
 #include "osapi.h"
 #include "at.h"
+//#include "at_config_store.h"
 
 extern uint8_t at_wifiMode;
 extern void user_esp_platform_load_param(void *param, uint16 len);
@@ -42,4 +43,5 @@ void user_init(void)
   os_printf("\r\nready!!!\r\n");
   uart0_sendStr("\r\nready\r\n");
   at_init();
+//  system_init_done_cb();
 }
