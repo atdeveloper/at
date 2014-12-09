@@ -30,14 +30,16 @@ typedef struct
 typedef struct 
 {
 	uint8_t ap_setMac;
+	uint8_t ap_dhcp;
 	uint8_t ap_setIp;
 	uint8_t ap_mac[6];
 	uint8_t ap_ip[4];
 	uint8_t sta_setMac;
+	uint8_t sta_dhcp;
 	uint8_t sta_setIp;
 	uint8_t sta_mac[6];
 	uint8_t sta_ip[4];
-//	uint8_t reserve[4];
+	uint8_t reserve[2];
 // ssid;
 // passwold;
 } atWifi_t;
@@ -86,6 +88,7 @@ atConfig_t *atConfig_get(void);
 void atConfig_save(void);
 void atConfig_init_default(void);
 atConfig_t *atConfig_init(void);
+void user_date_test(void);
 
 #endif //__AT_CONFIG_STORE_H
 

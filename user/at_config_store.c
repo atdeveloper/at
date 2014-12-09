@@ -74,37 +74,45 @@ atConfig_t ICACHE_FLASH_ATTR
 /*
 ** test code
 */
-//static atConfig_t test;
-//
-//void ICACHE_FLASH_ATTR
-//user_date_test(void)
-//{
-//  bzero(&test, sizeof(atConfig_t));
-//  
-//  atConfig_t show;
-//  char *p;
-//  int i;
-//
-//  test.serial.baud_rate = 115200;
-//  test.wifi_set.sta_setIp = 1;
-//  test.wifi_set.ap_setIp = 2;
-//  test.start.auto_trans = 1;
-//  test.start.role_type = 1;
-//  test.start.link_role.client.link_type = 1;
-//  test.start.link_role.client.remote_target.remote_ip[3] = 168;
-//  
-//  test.crc = crc32_checksum((uint8_t *)&test, (size_t)(sizeof(atConfig_t) - 4));
-//	
-//  user_esp_platform_save_param(&test, sizeof(atConfig_t));
-//
-//  user_esp_platform_load_param(&show, sizeof(atConfig_t));
-//
-//  p = (char *)&show;
-//  for(i; i<sizeof(atConfig_t); i++)
-//  {
-//    os_printf("0x%02X ", *p++);
-//  }
-//  os_printf("\r\nbaud:%d\r\n", show.serial.baud_rate);
-//  os_printf("ip part:%d\r\n", show.start.link_role.client.remote_target.remote_ip[3]);
-//  os_printf("crc32:0x%04X\r\n", show.crc);
-//}
+static atConfig_t test;
+
+void ICACHE_FLASH_ATTR
+user_date_test(void)
+{
+  bzero(&test, sizeof(atConfig_t));
+  
+  atConfig_t show;
+  char *p;
+  int i;
+
+//serial test
+  test.serial.baud_rate = 115200;
+  
+//wifi test
+  test.wifi_set.sta_dhcp = 1;
+  test.wifi_set.sta_setIp = 1;
+  test.wifi_set.sta_ip[3] = 192;
+  test.wifi_set.sta_ip[2] = 168;
+  test.wifi_set.sta_ip[1] = 10;
+  test.wifi_set.sta_ip[0] = 4;
+  
+  test.start.auto_trans = 1;
+  test.start.role_type = 1;
+  test.start.link_role.client.link_type = 1;
+  test.start.link_role.client.remote_target.remote_ip[3] = 168;
+  
+  test.crc = crc32_checksum((uint8_t *)&test, (size_t)(sizeof(atConfig_t) - 4));
+	
+  user_esp_platform_save_param(&test, sizeof(atConfig_t));
+
+  user_esp_platform_load_param(&show, sizeof(atConfig_t));
+
+  p = (char *)&show;
+  for(i; i<sizeof(atConfig_t); i++)
+  {
+    os_printf("0x%02X ", *p++);
+  }
+  os_printf("\r\nbaud:%d\r\n", show.serial.baud_rate);
+  os_printf("ip part:%d\r\n", show.start.link_role.client.remote_target.remote_ip[3]);
+  os_printf("crc32:0x%04X\r\n", show.crc);
+}
